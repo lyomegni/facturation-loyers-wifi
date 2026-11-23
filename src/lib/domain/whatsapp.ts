@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { addDays, formatDate } from "./dates";
 import { formatXaf } from "./money";
 
@@ -98,4 +99,49 @@ export function templateFor(kind: MessageKind, inv: InvoiceForTemplate, appUrl: 
         params: [inv.customer_name, formatXaf(inv.paid_xaf), inv.number, inv.label, formatDate(inv.paid_at), `${base}/api/factures/${inv.public_token}/pdf`],
       };
   }
+}
+
+/** Vérifie l'en-tête X-Hub-Signature-256 (« sha256=<hex> ») : HMAC-SHA256 du corps brut avec le secret de l'application. */
+export function verifyMetaSignature(rawBody: string, header: string | null, appSecret: string): boolean {
+  if (!header || !appSecret) return false;
+  const m = /^sha256=([0-9a-f]{64})$/i.exec(header.trim());
+  if (!m) return false;
+  const expected = createHmac("sha256", appSecret).update(rawBody, "utf8").digest();
+  const given = Buffer.from(m[1], "hex");
+  return given.length === expected.length && timingSafeEqual(given, expected);
+}
+
+export type StatusUpdate = { wamid: string; status: "envoye" | "remis" | "lu" | "non_remis"; error: string | null };
+
+const META_STATUS: Record<string, StatusUpdate["status"]> = {
+  sent: "envoye",
+  delivered: "remis",
+  read: "lu",
+  failed: "non_remis",
+};
+
+const asArray = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
+const asObject = (v: unknown): Record<string, unknown> =>
+  v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
+
+/** Extrait les statuts de remise d'une notification Meta ; ignore tout le reste, ne lève jamais. */
+export function parseStatusUpdates(json: unknown): StatusUpdate[] {
+  const out: StatusUpdate[] = [];
+  for (const entry of asArray(asObject(json).entry)) {
+    for (const change of asArray(asObject(entry).changes)) {
+      for (const raw of asArray(asObject(asObject(change).value).statuses)) {
+        const st = asObject(raw);
+        const status = typeof st.status === "string" && Object.hasOwn(META_STATUS, st.status) ? META_STATUS[st.status] : undefined;
+        if (typeof st.id !== "string" || !st.id || !status) continue;
+        let error: string | null = null;
+        if (status === "non_remis") {
+          const e = asObject(asArray(st.errors)[0]);
+          const text = typeof e.title === "string" ? e.title : typeof e.message === "string" ? e.message : null;
+          error = text ? text.slice(0, 300) : "Échec de remise";
+        }
+        out.push({ wamid: st.id, status, error });
+      }
+    }
+  }
+  return out;
 }

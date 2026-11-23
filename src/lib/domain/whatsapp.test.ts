@@ -1,6 +1,7 @@
+import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { formatXaf } from "./money";
-import { nextMessage, templateFor, type MessageKind, type MessageStatus, type SentMessage } from "./whatsapp";
+import { nextMessage, parseStatusUpdates, templateFor, verifyMetaSignature, type MessageKind, type MessageStatus, type SentMessage } from "./whatsapp";
 
 const inv = { status: "a_payer", issued_on: "2026-11-28", due_on: "2026-12-05", paid_at: null } as const;
 const s = (kind: MessageKind, day: string, status: MessageStatus = "envoye", attempts = 1): SentMessage => ({ kind, status, attempts, day });
@@ -88,5 +89,44 @@ describe("templateFor", () => {
     const call = templateFor("recu", { ...tpl, paid_xaf: 75000 }, "https://app");
     expect(call.name).toBe("recu_paiement");
     expect(call.params).toEqual(["Jean Mballa", formatXaf(75000), "FAC-2026-0001", "Loyer décembre 2026", "03/12/2026", "https://app/api/factures/tok/pdf"]);
+  });
+});
+
+describe("webhook Meta", () => {
+  const body = JSON.stringify({
+    entry: [
+      {
+        changes: [
+          {
+            value: {
+              statuses: [
+                { id: "wamid.1", status: "delivered" },
+                { id: "wamid.2", status: "failed", errors: [{ code: 131026, title: "Message undeliverable" }] },
+                { id: "wamid.3", status: "deleted" },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+  });
+  const sig = "sha256=" + createHmac("sha256", "secret").update(body).digest("hex");
+
+  it("vérifie la signature sur le corps brut", () => {
+    expect(verifyMetaSignature(body, sig, "secret")).toBe(true);
+    expect(verifyMetaSignature(body + " ", sig, "secret")).toBe(false);
+    expect(verifyMetaSignature(body, sig, "autre")).toBe(false);
+    expect(verifyMetaSignature(body, null, "secret")).toBe(false);
+    expect(verifyMetaSignature(body, "sha256=zz", "secret")).toBe(false);
+  });
+
+  it("lit les statuts de remise et ignore le reste", () => {
+    expect(parseStatusUpdates(JSON.parse(body))).toEqual([
+      { wamid: "wamid.1", status: "remis", error: null },
+      { wamid: "wamid.2", status: "non_remis", error: "Message undeliverable" },
+    ]);
+    expect(parseStatusUpdates({ entry: [{ changes: [{ value: { messages: [{ id: "x" }] } }] }] })).toEqual([]);
+    expect(parseStatusUpdates("n'importe quoi")).toEqual([]);
+    expect(parseStatusUpdates({ entry: [{ changes: [{ value: { statuses: [{ status: "read" }, null] } }] }] })).toEqual([]);
   });
 });
