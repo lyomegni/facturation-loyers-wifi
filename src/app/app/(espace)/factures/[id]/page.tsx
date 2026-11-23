@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { getContext } from "@/lib/context";
 import { BackLink, Field, Flash, PageHeader, StatusPill, formatDate } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
-import { deletePayment, recordPayment, setInvoiceCancelled } from "@/app/app/actions/invoices";
+import { deletePayment, recordPayment, resendInvoiceWhatsapp, setInvoiceCancelled } from "@/app/app/actions/invoices";
+import { KIND_LABELS, STATUS_LABELS, type MessageKind, type MessageStatus } from "@/lib/domain/whatsapp";
 import { formatXaf } from "@/lib/domain/money";
 import { formatPhone } from "@/lib/domain/phone";
 import { displayStatus, remaining } from "@/lib/domain/invoicing";
@@ -25,6 +26,12 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
   const inv = data as Invoice & { customer: { id: string; name: string; phone: string | null }; property: { name: string } | null };
   const { data: pays } = await ctx.supabase.from("payments").select("*").eq("invoice_id", id).order("paid_on");
   const payments = (pays ?? []) as Payment[];
+  const { data: msgs } = await ctx.supabase
+    .from("whatsapp_messages")
+    .select("id, kind, status, error, attempted_at")
+    .eq("invoice_id", id)
+    .order("attempted_at");
+  const messages = (msgs ?? []) as { id: string; kind: MessageKind; status: MessageStatus; error: string | null; attempted_at: string }[];
   const today = todayIso();
   const left = remaining(inv);
   const publicUrl = invoicePublicUrl(inv.public_token);
@@ -76,6 +83,36 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
               </table>
             </div>
           </section>
+
+          <section className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="h2">WhatsApp</h2>
+              {ctx.canEdit && inv.status === "a_payer" && (
+                <form action={resendInvoiceWhatsapp}>
+                  <input type="hidden" name="invoice_id" value={inv.id} />
+                  <SubmitButton>Renvoyer la facture sur WhatsApp</SubmitButton>
+                </form>
+              )}
+            </div>
+            <div className="table-wrap">
+              <table className="table">
+                <thead><tr><th>Date</th><th>Message</th><th>Statut</th></tr></thead>
+                <tbody>
+                  {messages.length === 0 && <tr><td colSpan={3} className="text-slate-500">Aucun message envoyé.</td></tr>}
+                  {messages.map((m) => (
+                    <tr key={m.id}>
+                      <td className="whitespace-nowrap">{formatDate(todayIso(new Date(m.attempted_at)))}</td>
+                      <td>{KIND_LABELS[m.kind]}</td>
+                      <td>
+                        {STATUS_LABELS[m.status]}
+                        {m.error && <span className="block text-xs text-slate-500">{m.error}</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
         </div>
 
         <div className="flex flex-col gap-4">
@@ -92,7 +129,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
             {inv.status !== "annulee" && left > 0 && (
               <form action={recordPayment} className="card flex flex-col gap-3">
                 <h2 className="h2">Enregistrer un paiement</h2>
-                <p className="text-xs text-slate-500">Pour un paiement reçu hors application (espèces, transfert direct). Les paiements par lien arriveront automatiquement à l&apos;étape 2.</p>
+                <p className="text-xs text-slate-500">Pour un paiement reçu hors application (espèces, transfert direct). Les paiements par lien Mobile Money (Campay) arrivent automatiquement.</p>
                 <input type="hidden" name="invoice_id" value={inv.id} />
                 <Field label="Montant (FCFA)" name="amount_xaf"><input id="amount_xaf" name="amount_xaf" required inputMode="numeric" className="input" defaultValue={left} /></Field>
                 <Field label="Moyen" name="method">

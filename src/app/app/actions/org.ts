@@ -29,6 +29,7 @@ export async function updateOrganization(form: FormData) {
         tax_id: str(form, "tax_id"),
         invoice_prefix: prefix,
         invoice_lead_days: intField(form, "invoice_lead_days", 0, 28),
+        whatsapp_enabled: form.get("whatsapp_enabled") === "on",
       })
       .eq("id", ctx.org.id);
     if (error) throw new Error(error.message);

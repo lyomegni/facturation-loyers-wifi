@@ -63,6 +63,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
             </Field>
             <Field label="E-mail (facultatif)" name="email"><input id="email" name="email" type="email" className="input" /></Field>
             <Field label="Notes" name="notes"><textarea id="notes" name="notes" rows={2} className="input" /></Field>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="whatsapp_opt_out" /> Ne pas contacter sur WhatsApp</label>
             <SubmitButton>Créer le client</SubmitButton>
           </form>
         )}
