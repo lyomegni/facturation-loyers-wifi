@@ -91,6 +91,9 @@ export default async function PublicInvoicePage({
           </form>
         )}
       </div>
+      <a href={`/api/factures/${token}/pdf`} className="btn-secondary">
+        Télécharger la facture (PDF)
+      </a>
       <p className="text-xs text-slate-500">
         {inv.org_name}{inv.org_address ? ` · ${inv.org_address}` : ""}{inv.org_phone ? ` · ${inv.org_phone}` : ""}. Si les
         informations de votre document papier diffèrent de celles-ci, il ne s&apos;agit pas d&apos;une facture valide.
