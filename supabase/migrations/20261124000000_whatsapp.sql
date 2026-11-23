@@ -31,19 +31,33 @@ create policy "lecture membres" on public.whatsapp_messages for select using (pu
 -- Aucune écriture pour les utilisateurs : seul le serveur (clé service) écrit.
 
 -- Réserve un envoi avant d'appeler Meta. Renvoie l'id de la ligne, ou null si rien n'est réservé
--- (déjà envoyé, en cours, incertain, ou 3 refus). Un refus explicite (« echec ») est repris.
+-- (déjà envoyé, en cours, incertain, 3 refus, facture plus dans le bon statut). Un refus explicite (« echec ») est repris.
 create or replace function public.whatsapp_reserve(p_invoice uuid, p_kind text, p_phone text, p_template text)
 returns uuid
 language plpgsql security definer set search_path = public as $$
 declare
   v_org uuid;
+  v_status text;
   v_id uuid;
 begin
-  select org_id into v_org from invoices where id = p_invoice;
+  -- Verrouille la facture : sérialise les réservations concurrentes et relit son statut au dernier moment.
+  select org_id, status into v_org, v_status from invoices where id = p_invoice for update;
   if not found then
     return null;
   end if;
+  -- Facture annulée ou payée entre-temps : plus de facture ni de rappel ; reçu seulement si payée.
+  if (p_kind = 'recu' and v_status <> 'payee') or (p_kind <> 'recu' and v_status <> 'a_payer') then
+    return null;
+  end if;
   if p_kind = 'renvoi' then
+    -- Pas de renvoi pendant un autre envoi, ni deux renvois en moins de 2 minutes (double clic, deux onglets).
+    if exists (
+      select 1 from whatsapp_messages
+      where invoice_id = p_invoice
+        and (status = 'en_cours' or (kind = 'renvoi' and attempted_at > now() - interval '2 minutes'))
+    ) then
+      return null;
+    end if;
     insert into whatsapp_messages (org_id, invoice_id, kind, phone, template)
     values (v_org, p_invoice, p_kind, p_phone, p_template)
     returning id into v_id;

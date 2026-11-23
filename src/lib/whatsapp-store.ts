@@ -6,7 +6,7 @@ import type { Candidate, WhatsappStore } from "@/lib/whatsapp-dispatch";
 
 const SELECT = `id, status, issued_on, due_on, paid_at, number, label, amount_xaf, paid_xaf, public_token,
   customer:customers(name, phone, whatsapp_opt_out),
-  org:organizations(whatsapp_enabled),
+  org:organizations(name, whatsapp_enabled),
   messages:whatsapp_messages(kind, status, attempts, attempted_at)`;
 
 export type Row = {
@@ -21,7 +21,7 @@ export type Row = {
   paid_xaf: number;
   public_token: string;
   customer: { name: string; phone: string | null; whatsapp_opt_out: boolean } | null;
-  org: { whatsapp_enabled: boolean } | null;
+  org: { name: string; whatsapp_enabled: boolean } | null;
   messages: { kind: MessageKind; status: MessageStatus; attempts: number; attempted_at: string }[] | null;
 };
 
@@ -38,6 +38,7 @@ export function toCandidate(r: Row): Candidate {
     paid_xaf: r.paid_xaf,
     public_token: r.public_token,
     customer_name: r.customer?.name ?? "",
+    org_name: r.org?.name ?? "",
     phone: r.customer?.phone ?? null,
     opt_out: r.customer?.whatsapp_opt_out ?? false,
     org_enabled: r.org?.whatsapp_enabled ?? false,

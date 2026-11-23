@@ -69,12 +69,12 @@ Numéros de test (environnement démo) : `237677777777` MTN réussi, `2376777777
    jeton de vérification = `WHATSAPP_VERIFY_TOKEN`, puis s'abonner au champ **messages**.
 7. **Modèles de messages** : WhatsApp Manager → Modèles → Créer, catégorie **Utility**, langue **French**,
    avec exactement ces noms et ces textes (les `{{n}}` sont remplis par l'application) :
-   - `facture_emise` : Bonjour {{1}}, nous vous remercions de votre confiance. Votre facture {{2}} ({{3}}) d'un montant de {{4}} est disponible, avec une échéance au {{5}}. Vous pouvez la régler par Orange Money ou MTN MoMo ici : {{6}} . Bonne journée.
-   - `rappel_avant_echeance` : Bonjour {{1}}, nous nous permettons de vous rappeler que votre facture {{2}} ({{3}}) de {{4}} arrive à échéance le {{5}}. Vous pouvez la régler ici : {{6}} . Merci beaucoup et bonne journée.
-   - `rappel_echeance` : Bonjour {{1}}, votre facture {{2}} ({{3}}) de {{4}} arrive à échéance aujourd'hui. Vous pouvez la régler ici : {{5}} . Si c'est déjà fait, merci de ne pas tenir compte de ce message. Bonne journée.
-   - `rappel_retard` : Bonjour {{1}}, sauf erreur de notre part, votre facture {{2}} ({{3}}), échue le {{4}}, reste à régler pour un montant de {{5}}. Vous pouvez la régler ici : {{6}} . Si le paiement est déjà en cours, merci de ne pas tenir compte de ce message. Nous vous remercions de votre compréhension.
-   - `recu_paiement` : Bonjour {{1}}, nous avons bien reçu votre paiement de {{2}} pour la facture {{3}} ({{4}}) le {{5}}. Votre facture acquittée est disponible ici : {{6}} . Merci pour votre confiance et à bientôt.
-   Meta demande un exemple pour chaque variable (par ex. Jean Mballa, FAC-2026-0001, Loyer décembre 2026, 75 000 FCFA, 05/12/2026, un lien). La validation prend de quelques minutes à 2 jours.
+   - `facture_emise` : Bonjour {{1}}, {{2}} vous remercie de votre confiance. Votre facture {{3}} ({{4}}) d'un montant de {{5}} est disponible, avec une échéance au {{6}}. Vous pouvez la régler par Orange Money ou MTN MoMo ici : {{7}} . Bonne journée.
+   - `rappel_avant_echeance` : Bonjour {{1}}, {{2}} se permet de vous rappeler que votre facture {{3}} ({{4}}) de {{5}} arrive à échéance le {{6}}. Vous pouvez la régler ici : {{7}} . Merci beaucoup et bonne journée.
+   - `rappel_echeance` : Bonjour {{1}}, {{2}} vous informe que votre facture {{3}} ({{4}}) de {{5}} arrive à échéance aujourd'hui. Vous pouvez la régler ici : {{6}} . Si c'est déjà fait, merci de ne pas tenir compte de ce message. Bonne journée.
+   - `rappel_retard` : Bonjour {{1}}, sauf erreur de la part de {{2}}, votre facture {{3}} ({{4}}), échue le {{5}}, reste à régler pour un montant de {{6}}. Vous pouvez la régler ici : {{7}} . Si le paiement est déjà en cours, merci de ne pas tenir compte de ce message. Nous vous remercions de votre compréhension.
+   - `recu_paiement` : Bonjour {{1}}, {{2}} a bien reçu votre paiement de {{3}} pour la facture {{4}} ({{5}}) le {{6}}. Votre facture acquittée est disponible ici : {{7}} . Merci pour votre confiance et à bientôt.
+   Meta demande un exemple pour chaque variable (par ex. Jean Mballa, Immeuble Les Palmiers, FAC-2026-0001, Loyer décembre 2026, 75 000 FCFA, 05/12/2026, un lien). La validation prend de quelques minutes à 2 jours.
 8. **Base** : appliquer la migration `20261124000000_whatsapp.sql` dans Supabase (SQL Editor).
 9. **Activer** : une fois les 5 modèles validés, cocher la case WhatsApp dans Paramètres. Pour tester d'abord,
    utilisez un client dont le numéro est l'un de vos numéros de test, puis « Renvoyer la facture sur WhatsApp ».

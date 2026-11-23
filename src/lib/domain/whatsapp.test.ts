@@ -63,32 +63,39 @@ describe("templateFor", () => {
     paid_at: "2026-12-03",
     public_token: "tok",
     customer_name: "Jean Mballa",
+    org_name: "Immeuble Les Palmiers",
   };
 
   it("rappel de retard avec le reste à payer", () => {
     expect(templateFor("rappel_j+3", tpl, "https://app")).toEqual({
       name: "rappel_retard",
-      params: ["Jean Mballa", "FAC-2026-0001", "Loyer décembre 2026", "05/12/2026", formatXaf(50000), "https://app/f/tok"],
+      params: ["Jean Mballa", "Immeuble Les Palmiers", "FAC-2026-0001", "Loyer décembre 2026", "05/12/2026", formatXaf(50000), "https://app/f/tok"],
     });
   });
 
   it("facture, rappels avant et à l'échéance", () => {
     expect(templateFor("facture", tpl, "https://app")).toEqual({
       name: "facture_emise",
-      params: ["Jean Mballa", "FAC-2026-0001", "Loyer décembre 2026", formatXaf(75000), "05/12/2026", "https://app/f/tok"],
+      params: ["Jean Mballa", "Immeuble Les Palmiers", "FAC-2026-0001", "Loyer décembre 2026", formatXaf(75000), "05/12/2026", "https://app/f/tok"],
     });
     expect(templateFor("rappel_j-3", tpl, "https://app").name).toBe("rappel_avant_echeance");
     expect(templateFor("rappel_j", tpl, "https://app")).toEqual({
       name: "rappel_echeance",
-      params: ["Jean Mballa", "FAC-2026-0001", "Loyer décembre 2026", formatXaf(50000), "https://app/f/tok"],
+      params: ["Jean Mballa", "Immeuble Les Palmiers", "FAC-2026-0001", "Loyer décembre 2026", formatXaf(50000), "https://app/f/tok"],
     });
     expect(templateFor("renvoi", tpl, "https://app").name).toBe("facture_emise");
+  });
+
+  it("nettoie les paramètres refusés par Meta (retours à la ligne, tabulations, espaces multiples, vide)", () => {
+    const call = templateFor("facture", { ...tpl, label: "Loyer\n décembre\t2026     appt 3", number: "" }, "https://app");
+    expect(call.params[3]).toBe("Loyer décembre 2026 appt 3");
+    expect(call.params[2]).toBe("—");
   });
 
   it("reçu avec le lien vers le PDF acquitté", () => {
     const call = templateFor("recu", { ...tpl, paid_xaf: 75000 }, "https://app");
     expect(call.name).toBe("recu_paiement");
-    expect(call.params).toEqual(["Jean Mballa", formatXaf(75000), "FAC-2026-0001", "Loyer décembre 2026", "03/12/2026", "https://app/api/factures/tok/pdf"]);
+    expect(call.params).toEqual(["Jean Mballa", "Immeuble Les Palmiers", formatXaf(75000), "FAC-2026-0001", "Loyer décembre 2026", "03/12/2026", "https://app/api/factures/tok/pdf"]);
   });
 });
 

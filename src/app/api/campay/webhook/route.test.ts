@@ -78,7 +78,7 @@ describe("webhook Campay : reçu WhatsApp", () => {
   const paidRow = () => ({
     id: INV, status: "payee", issued_on: "2026-11-28", due_on: "2026-12-05", paid_at: todayIso(), number: "FAC-2026-0001",
     label: "Loyer", amount_xaf: 75000, paid_xaf: 75000, public_token: "tok",
-    customer: { name: "Jean", phone: "+237699000000", whatsapp_opt_out: false }, org: { whatsapp_enabled: true }, messages: [],
+    customer: { name: "Jean", phone: "+237699000000", whatsapp_opt_out: false }, org: { name: "Org", whatsapp_enabled: true }, messages: [],
   });
 
   beforeEach(() => {

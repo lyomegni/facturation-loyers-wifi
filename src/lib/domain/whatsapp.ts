@@ -74,30 +74,43 @@ export type InvoiceForTemplate = {
   paid_at: string | null;
   public_token: string;
   customer_name: string;
+  org_name: string;
 };
+
+/** Meta refuse les paramètres vides ou contenant retours à la ligne, tabulations ou plus de 4 espaces. */
+function clean(value: string): string {
+  const v = value.replace(/[\r\n\t]+/g, " ").replace(/ {2,}/g, " ").trim();
+  return v === "" ? "—" : v.slice(0, 500);
+}
 
 /** Nom du modèle Meta et ses paramètres, dans l'ordre des variables {{1}}, {{2}}… */
 export function templateFor(kind: MessageKind, inv: InvoiceForTemplate, appUrl: string): TemplateCall {
   const base = appUrl.replace(/\/+$/, "");
   const link = `${base}/f/${inv.public_token}`;
   const rest = formatXaf(Math.max(inv.amount_xaf - inv.paid_xaf, 0));
-  const head = [inv.customer_name, inv.number, inv.label];
+  const head = [inv.customer_name, inv.org_name, inv.number, inv.label];
+  const call = (name: string, params: string[]): TemplateCall => ({ name, params: params.map(clean) });
   switch (kind) {
     case "facture":
     case "renvoi":
-      return { name: "facture_emise", params: [...head, formatXaf(inv.amount_xaf), formatDate(inv.due_on), link] };
+      return call("facture_emise", [...head, formatXaf(inv.amount_xaf), formatDate(inv.due_on), link]);
     case "rappel_j-3":
-      return { name: "rappel_avant_echeance", params: [...head, rest, formatDate(inv.due_on), link] };
+      return call("rappel_avant_echeance", [...head, rest, formatDate(inv.due_on), link]);
     case "rappel_j":
-      return { name: "rappel_echeance", params: [...head, rest, link] };
+      return call("rappel_echeance", [...head, rest, link]);
     case "rappel_j+3":
     case "rappel_j+7":
-      return { name: "rappel_retard", params: [...head, formatDate(inv.due_on), rest, link] };
+      return call("rappel_retard", [...head, formatDate(inv.due_on), rest, link]);
     case "recu":
-      return {
-        name: "recu_paiement",
-        params: [inv.customer_name, formatXaf(inv.paid_xaf), inv.number, inv.label, formatDate(inv.paid_at), `${base}/api/factures/${inv.public_token}/pdf`],
-      };
+      return call("recu_paiement", [
+        inv.customer_name,
+        inv.org_name,
+        formatXaf(inv.paid_xaf),
+        inv.number,
+        inv.label,
+        formatDate(inv.paid_at),
+        `${base}/api/factures/${inv.public_token}/pdf`,
+      ]);
   }
 }
 

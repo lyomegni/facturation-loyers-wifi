@@ -55,6 +55,7 @@ const base: Omit<Candidate, "sent"> = {
   paid_xaf: 0,
   public_token: "tok",
   customer_name: "Jean Mballa",
+  org_name: "Immeuble Les Palmiers",
   phone: "+237699000000",
   opt_out: false,
   org_enabled: true,
