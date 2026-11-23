@@ -6,6 +6,9 @@ import { assertAdmin, assertCanEdit, getContext } from "@/lib/context";
 import { issueInvoicesForOrg } from "@/lib/invoicing";
 import { todayIso } from "@/lib/domain/dates";
 import { parseXaf } from "@/lib/domain/money";
+import { createAdminClient } from "@/lib/supabase/server";
+import { resendInvoice, sendReceiptIfDue } from "@/lib/whatsapp-dispatch";
+import { whatsappDeps } from "@/lib/whatsapp-deps";
 import { dateField, failTo, str } from "./helpers";
 
 const METHODS = ["orange_money", "mtn_momo", "especes", "virement", "autre"];
@@ -51,6 +54,8 @@ export async function recordPayment(form: FormData) {
       recorded_by: ctx.user.id,
     });
     if (error) throw new Error(error.message);
+    // Reçu WhatsApp immédiat si ce paiement solde la facture ; ne lève jamais.
+    await sendReceiptIfDue(whatsappDeps(createAdminClient()), invoiceId);
   } catch (e) {
     failTo(back, e);
   }
@@ -92,4 +97,23 @@ export async function setInvoiceCancelled(form: FormData) {
   }
   revalidatePath("/app", "layout");
   redirect(`/app/factures/${id}?ok=` + encodeURIComponent(cancel ? "Facture annulée." : "Facture rétablie."));
+}
+
+export async function resendInvoiceWhatsapp(form: FormData) {
+  const ctx = await getContext();
+  const invoiceId = String(form.get("invoice_id") ?? "");
+  const back = `/app/factures/${invoiceId}`;
+  try {
+    assertCanEdit(ctx);
+    // Vérifie que la facture appartient bien à l'espace courant (RLS) avant d'utiliser la clé service.
+    const { data: inv, error } = await ctx.supabase.from("invoices").select("id").eq("id", invoiceId).eq("org_id", ctx.org.id).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!inv) throw new Error("Facture introuvable.");
+    const result = await resendInvoice(whatsappDeps(createAdminClient()), invoiceId);
+    if (result.outcome === "incertain") throw new Error("WhatsApp n'a pas confirmé l'envoi. Vérifiez l'historique avant de renvoyer.");
+  } catch (e) {
+    failTo(back, e);
+  }
+  revalidatePath(back);
+  redirect(`${back}?ok=` + encodeURIComponent("Facture renvoyée sur WhatsApp."));
 }

@@ -145,3 +145,23 @@ export function parseStatusUpdates(json: unknown): StatusUpdate[] {
   }
   return out;
 }
+
+export const KIND_LABELS: Record<MessageKind, string> = {
+  facture: "Facture",
+  "rappel_j-3": "Rappel J-3",
+  rappel_j: "Rappel échéance",
+  "rappel_j+3": "Rappel J+3",
+  "rappel_j+7": "Rappel J+7",
+  recu: "Reçu",
+  renvoi: "Renvoi manuel",
+};
+
+export const STATUS_LABELS: Record<MessageStatus, string> = {
+  en_cours: "En cours",
+  envoye: "Envoyé",
+  remis: "Remis",
+  lu: "Lu",
+  echec: "Refusé par WhatsApp",
+  incertain: "Incertain",
+  non_remis: "Non remis",
+};

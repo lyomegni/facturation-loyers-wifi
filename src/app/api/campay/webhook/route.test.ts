@@ -2,9 +2,12 @@ import { createHmac } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const rpc = vi.fn();
-vi.mock("@/lib/supabase/server", () => ({ createAdminClient: () => ({ rpc }) }));
+const invoiceRow = vi.fn(async () => ({ data: null as unknown, error: null }));
+const chain = { select: () => chain, eq: () => chain, maybeSingle: () => invoiceRow(), update: () => chain };
+vi.mock("@/lib/supabase/server", () => ({ createAdminClient: () => ({ rpc, from: () => chain }) }));
 
 import { GET, POST } from "./route";
+import { todayIso } from "@/lib/domain/dates";
 
 const INV = "0b6f6a52-1d1b-4c5e-9f3b-7f1b2c3d4e5f";
 const b64url = (s: string) => Buffer.from(s).toString("base64url");
@@ -68,5 +71,50 @@ describe("webhook Campay", () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("err", { status: 502 })));
     const res = await GET(new Request(url(`reference=r1&signature=${sign({}, "wk")}`)));
     expect(res.status).toBe(500);
+  });
+});
+
+describe("webhook Campay : reçu WhatsApp", () => {
+  const paidRow = () => ({
+    id: INV, status: "payee", issued_on: "2026-11-28", due_on: "2026-12-05", paid_at: todayIso(), number: "FAC-2026-0001",
+    label: "Loyer", amount_xaf: 75000, paid_xaf: 75000, public_token: "tok",
+    customer: { name: "Jean", phone: "+237699000000", whatsapp_opt_out: false }, org: { whatsapp_enabled: true }, messages: [],
+  });
+
+  beforeEach(() => {
+    process.env.WHATSAPP_TOKEN = "wtok";
+    process.env.WHATSAPP_PHONE_NUMBER_ID = "123";
+    rpc.mockImplementation(async (name: string) =>
+      name === "record_provider_payment" ? { data: "enregistre", error: null } : { data: "msg1", error: null },
+    );
+    invoiceRow.mockResolvedValue({ data: paidRow(), error: null });
+  });
+  afterEach(() => {
+    delete process.env.WHATSAPP_TOKEN;
+    delete process.env.WHATSAPP_PHONE_NUMBER_ID;
+  });
+
+  const routedFetch = (meta: () => Promise<Response>) =>
+    vi.fn(async (input: string, _init?: RequestInit) =>
+      String(input).includes("graph.facebook.com")
+        ? meta()
+        : new Response(JSON.stringify({ reference: "r1", status: "SUCCESSFUL", amount: "75000", operator: "MTN", external_reference: INV }), { status: 200 }),
+    );
+
+  it("envoie le reçu dès que le paiement est enregistré", async () => {
+    const f = routedFetch(async () => new Response(JSON.stringify({ messages: [{ id: "wamid.r" }] }), { status: 200 }));
+    vi.stubGlobal("fetch", f);
+    const res = await GET(new Request(url(`reference=r1&signature=${sign({}, "wk")}`)));
+    expect(await res.json()).toEqual({ outcome: "enregistre" });
+    const meta = f.mock.calls.find((c) => String(c[0]).includes("graph.facebook.com"));
+    expect(JSON.parse(String(meta?.[1]?.body)).template.name).toBe("recu_paiement");
+  });
+
+  it("un échec WhatsApp ne change pas la réponse au webhook", async () => {
+    vi.stubGlobal("fetch", routedFetch(async () => { throw new Error("réseau"); }));
+    invoiceRow.mockRejectedValueOnce(new Error("base en panne"));
+    const res = await GET(new Request(url(`reference=r1&signature=${sign({}, "wk")}`)));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ outcome: "enregistre" });
   });
 });

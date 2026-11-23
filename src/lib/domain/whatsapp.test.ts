@@ -1,7 +1,7 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { formatXaf } from "./money";
-import { nextMessage, parseStatusUpdates, templateFor, verifyMetaSignature, type MessageKind, type MessageStatus, type SentMessage } from "./whatsapp";
+import { KIND_LABELS, STATUS_LABELS, nextMessage, parseStatusUpdates, templateFor, verifyMetaSignature, type MessageKind, type MessageStatus, type SentMessage } from "./whatsapp";
 
 const inv = { status: "a_payer", issued_on: "2026-11-28", due_on: "2026-12-05", paid_at: null } as const;
 const s = (kind: MessageKind, day: string, status: MessageStatus = "envoye", attempts = 1): SentMessage => ({ kind, status, attempts, day });
@@ -128,5 +128,14 @@ describe("webhook Meta", () => {
     expect(parseStatusUpdates({ entry: [{ changes: [{ value: { messages: [{ id: "x" }] } }] }] })).toEqual([]);
     expect(parseStatusUpdates("n'importe quoi")).toEqual([]);
     expect(parseStatusUpdates({ entry: [{ changes: [{ value: { statuses: [{ status: "read" }, null] } }] }] })).toEqual([]);
+  });
+});
+
+describe("libellés", () => {
+  it("types et statuts lisibles", () => {
+    expect(KIND_LABELS["rappel_j+3"]).toBe("Rappel J+3");
+    expect(KIND_LABELS.renvoi).toBe("Renvoi manuel");
+    expect(STATUS_LABELS.echec).toBe("Refusé par WhatsApp");
+    expect(STATUS_LABELS.non_remis).toBe("Non remis");
   });
 });

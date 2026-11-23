@@ -11,6 +11,7 @@ export type Organization = {
   tax_id: string | null;
   invoice_prefix: string;
   invoice_lead_days: number;
+  whatsapp_enabled: boolean;
   created_at: string;
 };
 
@@ -40,6 +41,7 @@ export type Customer = {
   email: string | null;
   notes: string | null;
   archived: boolean;
+  whatsapp_opt_out: boolean;
   created_at: string;
 };
 

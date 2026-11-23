@@ -98,6 +98,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
             <Field label="Numéro WhatsApp" name="phone"><input id="phone" name="phone" inputMode="tel" className="input" defaultValue={c.phone ?? ""} /></Field>
             <Field label="E-mail" name="email"><input id="email" name="email" type="email" className="input" defaultValue={c.email ?? ""} /></Field>
             <Field label="Notes" name="notes"><textarea id="notes" name="notes" rows={3} className="input" defaultValue={c.notes ?? ""} /></Field>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="whatsapp_opt_out" defaultChecked={c.whatsapp_opt_out} /> Ne pas contacter sur WhatsApp</label>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="archived" defaultChecked={c.archived} /> Client archivé</label>
             <SubmitButton>Enregistrer</SubmitButton>
             <p className="text-xs text-slate-500">Services : {[...new Set(contractList.filter((k) => k.active).map((k) => SERVICE_LABELS[k.service]))].join(", ") || "aucun"}</p>

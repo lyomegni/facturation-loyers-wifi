@@ -25,7 +25,7 @@ export async function createCustomer(form: FormData) {
     assertCanEdit(ctx);
     const { data, error } = await ctx.supabase
       .from("customers")
-      .insert({ org_id: ctx.org.id, name: required(form, "name", "Nom"), phone: phone(form), email: str(form, "email"), notes: str(form, "notes") })
+      .insert({ org_id: ctx.org.id, name: required(form, "name", "Nom"), phone: phone(form), email: str(form, "email"), notes: str(form, "notes"), whatsapp_opt_out: form.get("whatsapp_opt_out") === "on" })
       .select("id")
       .single();
     if (error) throw dbError(error);
@@ -44,7 +44,7 @@ export async function updateCustomer(form: FormData) {
     assertCanEdit(ctx);
     const { error } = await ctx.supabase
       .from("customers")
-      .update({ name: required(form, "name", "Nom"), phone: phone(form), email: str(form, "email"), notes: str(form, "notes"), archived: form.get("archived") === "on" })
+      .update({ name: required(form, "name", "Nom"), phone: phone(form), email: str(form, "email"), notes: str(form, "notes"), archived: form.get("archived") === "on", whatsapp_opt_out: form.get("whatsapp_opt_out") === "on" })
       .eq("id", id)
       .eq("org_id", ctx.org.id);
     if (error) throw dbError(error);

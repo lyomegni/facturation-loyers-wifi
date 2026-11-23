@@ -4,6 +4,8 @@ import { getTransaction } from "@/lib/campay";
 import { recordCampayPayment } from "@/lib/payments";
 import { parseWebhookParams, verifyHs256Jwt } from "@/lib/domain/campay";
 import { todayIso } from "@/lib/domain/dates";
+import { sendReceiptIfDue } from "@/lib/whatsapp-dispatch";
+import { whatsappDeps } from "@/lib/whatsapp-deps";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,7 +23,12 @@ async function handle(params: URLSearchParams): Promise<Response> {
   }
   try {
     const tx = await getTransaction(hook.reference);
-    const outcome = await recordCampayPayment(createAdminClient(), tx, todayIso());
+    const db = createAdminClient();
+    const outcome = await recordCampayPayment(db, tx, todayIso());
+    if (outcome === "enregistre" && tx.externalReference) {
+      // Reçu WhatsApp immédiat ; ne lève jamais, le cron du lendemain rattrape un échec.
+      await sendReceiptIfDue(whatsappDeps(db), tx.externalReference);
+    }
     if (outcome === "facture_introuvable" || outcome === "facture_annulee") {
       console.error(`[campay] paiement ${tx.reference} non rattaché : ${outcome} (${tx.externalReference})`);
     }
