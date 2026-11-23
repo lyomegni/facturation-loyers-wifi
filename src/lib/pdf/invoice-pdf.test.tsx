@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pdfText, renderInvoicePdf, stampText, type InvoicePdfData } from "./invoice-pdf";
+import { pdfText, publicCustomer, renderInvoicePdf, stampText, type InvoicePdfData } from "./invoice-pdf";
 
 const base: InvoicePdfData = {
   org: { name: "Résidences Test", address: "Douala", phone: "+237 6 99 00 00 00", email: null, tax_id: null },
@@ -26,4 +26,9 @@ describe("renderInvoicePdf", () => {
     expect(buf.subarray(0, 4).toString()).toBe("%PDF");
     expect(buf.length).toBeGreaterThan(1000);
   }, 20000);
+});
+
+describe("publicCustomer", () => {
+  it("masque le nom et retire le téléphone pour le PDF public", () =>
+    expect(publicCustomer({ name: "Jean Paul Mballa", phone: "+237699000000" })).toEqual({ name: "Jean P. M.", phone: null }));
 });

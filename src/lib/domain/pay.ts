@@ -10,3 +10,9 @@ export function splitName(full: string): { firstName: string; lastName: string }
   const [firstName = "", ...rest] = full.trim().split(/\s+/);
   return { firstName, lastName: rest.join(" ") };
 }
+
+/** Pourquoi le paiement en ligne est refusé : facture annulée, déjà réglée, ou null s'il reste à payer. */
+export function paymentBlock(inv: { status: StoredStatus; amount_xaf: number; paid_xaf: number }): "annulee" | "deja" | null {
+  if (inv.status === "annulee") return "annulee";
+  return payableAmount(inv) === 0 ? "deja" : null;
+}

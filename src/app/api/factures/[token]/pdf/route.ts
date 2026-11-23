@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { invoicePublicUrl, qrPngDataUrl } from "@/lib/qr";
-import { renderInvoicePdf, type InvoicePdfData } from "@/lib/pdf/invoice-pdf";
+import { publicCustomer, renderInvoicePdf, type InvoicePdfData } from "@/lib/pdf/invoice-pdf";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,7 +28,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ token: str
   const pdf = await renderInvoicePdf({
     org: inv.org,
     invoice: inv,
-    customer: inv.customer,
+    customer: publicCustomer(inv.customer ?? { name: "", phone: null }),
     propertyName: inv.property?.name ?? null,
     publicUrl,
     qrDataUrl: await qrPngDataUrl(publicUrl),

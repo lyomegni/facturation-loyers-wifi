@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/server";
 import { campayConfigured, createPaymentLink } from "@/lib/campay";
 import { appUrl } from "@/lib/env";
-import { payableAmount, splitName } from "@/lib/domain/pay";
+import { payableAmount, paymentBlock, splitName } from "@/lib/domain/pay";
 import type { StoredStatus } from "@/lib/domain/invoicing";
 
 const TOKEN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -26,8 +26,9 @@ export async function startPayment(token: string): Promise<void> {
       id: string; number: string; label: string; status: StoredStatus; amount_xaf: number; paid_xaf: number;
       customer: { name: string; email: string | null } | null;
     };
+    const blocked = paymentBlock(inv);
+    if (blocked) redirect(`${back}?paiement=${blocked}`);
     const amount = payableAmount(inv);
-    if (amount === 0) redirect(`${back}?paiement=deja`);
     const name = splitName(inv.customer?.name ?? "");
     ({ link } = await createPaymentLink({
       amount,

@@ -1,7 +1,7 @@
 import { Document, Image, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer";
 import { formatXaf } from "@/lib/domain/money";
 import { formatDate } from "@/lib/domain/dates";
-import { formatPhone } from "@/lib/domain/phone";
+import { formatPhone, maskName } from "@/lib/domain/phone";
 import { remaining, type StoredStatus } from "@/lib/domain/invoicing";
 
 export type InvoicePdfData = {
@@ -114,4 +114,9 @@ export function InvoicePdf({ data }: { data: InvoicePdfData }) {
 
 export async function renderInvoicePdf(data: InvoicePdfData): Promise<Buffer> {
   return renderToBuffer(<InvoicePdf data={data} />);
+}
+
+/** Client tel qu'il apparaît sur le PDF public : nom masqué, sans téléphone (comme la page /f). */
+export function publicCustomer(c: InvoicePdfData["customer"]): InvoicePdfData["customer"] {
+  return { name: maskName(c.name), phone: null };
 }

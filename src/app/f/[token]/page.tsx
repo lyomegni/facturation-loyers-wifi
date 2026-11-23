@@ -45,8 +45,11 @@ export default async function PublicInvoicePage({
   if (!inv) notFound();
   const status = displayStatus(inv, todayIso());
   const toPay = payableAmount(inv);
+  const cancelledNotice = { tone: "border-slate-400 bg-slate-50 text-slate-700", text: "Cette facture a été annulée : aucun paiement n'est attendu." };
   const notice =
-    paiement === "retour" && status !== "payee"
+    status === "annulee" && (paiement === "retour" || paiement === "annulee")
+      ? cancelledNotice
+      : paiement === "retour" && status !== "payee"
       ? { tone: "border-warn bg-amber-50", text: "Paiement en cours de confirmation. Actualisez cette page dans un instant." }
       : paiement === "retour"
         ? { tone: "border-ok bg-emerald-50 text-ok", text: "Merci, votre paiement a bien été reçu." }
