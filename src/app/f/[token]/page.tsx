@@ -4,6 +4,10 @@ import { formatXaf } from "@/lib/domain/money";
 import { formatDate, todayIso } from "@/lib/domain/dates";
 import { maskName } from "@/lib/domain/phone";
 import { displayStatus, STATUS_LABELS, type StoredStatus } from "@/lib/domain/invoicing";
+import { payableAmount } from "@/lib/domain/pay";
+import { campayConfigured } from "@/lib/campay";
+import { SubmitButton } from "@/components/submit-button";
+import { startPayment } from "./actions";
 
 export const metadata = { title: "Vérification de facture", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
@@ -25,14 +29,35 @@ type PublicInvoice = {
 };
 
 /** Cible du code QR imprimé sur chaque facture : prouve que la facture existe et montre son état. */
-export default async function PublicInvoicePage({ params }: { params: Promise<{ token: string }> }) {
+export default async function PublicInvoicePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ token: string }>;
+  searchParams: Promise<{ paiement?: string }>;
+}) {
   const { token } = await params;
+  const { paiement } = await searchParams;
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(token)) notFound();
   const supabase = await createClient();
   const { data } = await supabase.rpc("get_public_invoice", { token });
   const inv = (data as PublicInvoice[] | null)?.[0];
   if (!inv) notFound();
   const status = displayStatus(inv, todayIso());
+  const toPay = payableAmount(inv);
+  const cancelledNotice = { tone: "border-slate-400 bg-slate-50 text-slate-700", text: "Cette facture a été annulée : aucun paiement n'est attendu." };
+  const notice =
+    status === "annulee" && (paiement === "retour" || paiement === "annulee")
+      ? cancelledNotice
+      : paiement === "retour" && status !== "payee"
+      ? { tone: "border-warn bg-amber-50", text: "Paiement en cours de confirmation. Actualisez cette page dans un instant." }
+      : paiement === "retour"
+        ? { tone: "border-ok bg-emerald-50 text-ok", text: "Merci, votre paiement a bien été reçu." }
+        : paiement === "erreur"
+          ? { tone: "border-risk bg-red-50 text-risk", text: "Le service de paiement ne répond pas. Réessayez dans quelques minutes." }
+          : paiement === "deja"
+            ? { tone: "border-ok bg-emerald-50 text-ok", text: "Cette facture est déjà réglée." }
+            : null;
   const tone =
     status === "payee" ? "border-ok bg-emerald-50 text-ok" : status === "annulee" ? "border-slate-400 bg-slate-50 text-slate-700" : status === "en_retard" ? "border-risk bg-red-50 text-risk" : "border-warn bg-amber-50 text-warn";
 
@@ -42,6 +67,7 @@ export default async function PublicInvoicePage({ params }: { params: Promise<{ 
         <svg viewBox="0 0 20 20" className="h-5 w-5" fill="currentColor" aria-hidden><path d="M10 1l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V4l7-3zm-1 12l6-6-1.4-1.4L9 10.2 6.4 7.6 5 9l4 4z" /></svg>
         Facture authentique, émise par {inv.org_name}
       </div>
+      {notice && <div className={`border-l-4 px-3 py-2 text-sm ${notice.tone}`}>{notice.text}</div>}
       <div className="card flex flex-col gap-4">
         <div>
           <p className="label">Facture</p>
@@ -60,7 +86,17 @@ export default async function PublicInvoicePage({ params }: { params: Promise<{ 
           <div><dt className="label">Émise le</dt><dd>{formatDate(inv.issued_on)}</dd></div>
           <div><dt className="label">Échéance</dt><dd>{formatDate(inv.due_on)}</dd></div>
         </dl>
+        {campayConfigured() && toPay > 0 && (
+          <form action={startPayment.bind(null, token)}>
+            <SubmitButton className="btn-primary w-full" pending="Redirection vers le paiement…">
+              Payer {formatXaf(toPay)} par Orange Money ou MTN MoMo
+            </SubmitButton>
+          </form>
+        )}
       </div>
+      <a href={`/api/factures/${token}/pdf`} className="btn-secondary">
+        Télécharger la facture (PDF)
+      </a>
       <p className="text-xs text-slate-500">
         {inv.org_name}{inv.org_address ? ` · ${inv.org_address}` : ""}{inv.org_phone ? ` · ${inv.org_phone}` : ""}. Si les
         informations de votre document papier diffèrent de celles-ci, il ne s&apos;agit pas d&apos;une facture valide.

@@ -10,3 +10,8 @@ export function invoicePublicUrl(token: string): string {
 export async function qrSvg(text: string): Promise<string> {
   return QRCode.toString(text, { type: "svg", errorCorrectionLevel: "M", margin: 1, color: { dark: "#13222b", light: "#ffffff" } });
 }
+
+/** Code QR en PNG (data URL), pour le PDF. */
+export async function qrPngDataUrl(text: string): Promise<string> {
+  return QRCode.toDataURL(text, { errorCorrectionLevel: "M", margin: 1, width: 300, color: { dark: "#13222b", light: "#ffffff" } });
+}

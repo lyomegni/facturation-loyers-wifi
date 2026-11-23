@@ -33,7 +33,7 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
   return (
     <>
       <BackLink href="/app/factures">Factures</BackLink>
-      <PageHeader title={`Facture ${inv.number}`} subtitle={inv.label} actions={<><StatusPill status={displayStatus(inv, today)} /><Link href={`/app/factures-imprimables/${inv.id}`} className="btn-secondary">Facture imprimable</Link></>} />
+      <PageHeader title={`Facture ${inv.number}`} subtitle={inv.label} actions={<><StatusPill status={displayStatus(inv, today)} /><Link href={`/app/factures-imprimables/${inv.id}`} className="btn-secondary">Facture imprimable</Link><a href={`/api/factures/${inv.public_token}/pdf`} className="btn-secondary">PDF</a></>} />
       <Flash erreur={erreur} ok={ok} />
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="flex min-w-0 flex-col gap-6">
