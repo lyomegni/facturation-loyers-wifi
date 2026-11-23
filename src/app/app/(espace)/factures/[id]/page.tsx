@@ -8,6 +8,7 @@ import { formatXaf } from "@/lib/domain/money";
 import { formatPhone } from "@/lib/domain/phone";
 import { displayStatus, remaining } from "@/lib/domain/invoicing";
 import { todayIso } from "@/lib/domain/dates";
+import { invoicePublicUrl, qrSvg } from "@/lib/qr";
 import { PAYMENT_METHOD_LABELS, type Invoice, type Payment, type PaymentMethod } from "@/lib/types";
 
 export default async function InvoicePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ erreur?: string; ok?: string }> }) {
@@ -26,11 +27,13 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
   const payments = (pays ?? []) as Payment[];
   const today = todayIso();
   const left = remaining(inv);
+  const publicUrl = invoicePublicUrl(inv.public_token);
+  const svg = await qrSvg(publicUrl);
 
   return (
     <>
       <BackLink href="/app/factures">Factures</BackLink>
-      <PageHeader title={`Facture ${inv.number}`} subtitle={inv.label} actions={<StatusPill status={displayStatus(inv, today)} />} />
+      <PageHeader title={`Facture ${inv.number}`} subtitle={inv.label} actions={<><StatusPill status={displayStatus(inv, today)} /><Link href={`/app/factures-imprimables/${inv.id}`} className="btn-secondary">Facture imprimable</Link></>} />
       <Flash erreur={erreur} ok={ok} />
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="flex min-w-0 flex-col gap-6">
@@ -75,8 +78,17 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
           </section>
         </div>
 
+        <div className="flex flex-col gap-4">
+          <div className="card flex items-center gap-3">
+            <div className="h-24 w-24 shrink-0 [&>svg]:h-full [&>svg]:w-full" dangerouslySetInnerHTML={{ __html: svg }} />
+            <div className="min-w-0 text-xs text-slate-600">
+              <p className="font-medium text-ink">Code QR d&apos;authenticité</p>
+              <p>Imprimé sur la facture. Il ouvre la page de vérification :</p>
+              <a href={publicUrl} target="_blank" rel="noreferrer" className="break-all underline">{publicUrl}</a>
+            </div>
+          </div>
         {ctx.canEdit && (
-          <div className="flex flex-col gap-4">
+          <>
             {inv.status !== "annulee" && left > 0 && (
               <form action={recordPayment} className="card flex flex-col gap-3">
                 <h2 className="h2">Enregistrer un paiement</h2>
@@ -102,8 +114,9 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
                 </button>
               </form>
             )}
-          </div>
+          </>
         )}
+        </div>
       </div>
     </>
   );

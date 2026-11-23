@@ -11,6 +11,7 @@ suivi des paiements, et (étapes suivantes) lien de paiement Orange Money / MTN 
 - **Contrats** : loyer, redevance Wi-Fi ou autre ; montant mensuel, jour d'échéance (1 à 28), logement ou point d'accès, dates de début et de fin.
 - **Factures** : émises automatiquement chaque matin (cron Vercel) `N` jours avant l'échéance (7 par défaut), une par contrat et par mois, numérotées `FAC-2026-0001` sans doublon. Bouton « Émettre les factures dues » pour le faire à la main.
 - **Paiements** : saisie manuelle (Orange Money, MTN MoMo, espèces, virement), paiements partiels, statut mis à jour par la base (à payer, partiellement payée, en retard, payée, annulée).
+- **Code QR d'authenticité** : chaque facture imprimable porte un code QR qui ouvre sa page publique de vérification (`/f/<jeton>`), avec son état de paiement.
 - **Tableau de bord** : facturé et encaissé du mois, impayés en retard.
 - **Import Excel / CSV** : clients et contrats en une fois, colonnes reconnues automatiquement, biens créés au besoin.
 

@@ -32,3 +32,12 @@ describe("montants", () => {
     expect(parseXaf(12.5)).toBeNull();
   });
 });
+
+import { maskName } from "./phone";
+
+describe("maskName", () => {
+  it("masque les noms suivants", () => {
+    expect(maskName("Jean-Paul Mballa Nkodo")).toBe("Jean-Paul M. N.");
+    expect(maskName("  Awa  ")).toBe("Awa");
+  });
+});

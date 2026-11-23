@@ -31,3 +31,10 @@ export function formatPhone(phone: string | null | undefined): string {
   const m = phone.match(/^\+237(\d)(\d{2})(\d{2})(\d{2})(\d{2})$/);
   return m ? `+237 ${m[1]} ${m[2]} ${m[3]} ${m[4]} ${m[5]}` : phone;
 }
+
+/** « Jean-Paul Mballa Nkodo » → « Jean-Paul M. N. » : nom partiellement masqué pour la page publique. */
+export function maskName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return parts[0] ?? "";
+  return [parts[0], ...parts.slice(1).map((p) => `${p[0].toUpperCase()}.`)].join(" ");
+}
